@@ -13,9 +13,10 @@ end
 if parentGui:FindFirstChild("ESPMenuGui") then parentGui.ESPMenuGui:Destroy() end
 
 local HIGHLIGHT_COLOR, TEXT_COLOR = Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 255, 255)
-local espEnabled, instantPromptEnabled, fixLagEnabled, infiniteJumpEnabled, noclipEnabled, speedEnabled = false, false, false, false, false, false
-local customSpeed, trackedPlayers, originalHoldDurations, originalLightingSettings, removedEffects, originalMaterialState = 16, {}, {}, {}, {}, {}
-local promptConnection, renderConnection, noclipConnection, timeConnection
+local FRUIT_COLOR = Color3.fromRGB(0, 255, 127)
+local espEnabled, instantPromptEnabled, fixLagEnabled, infiniteJumpEnabled, noclipEnabled, speedEnabled, fruitEspEnabled = false, false, false, false, false, false, false
+local customSpeed, trackedPlayers, trackedFruits, originalHoldDurations, originalLightingSettings, removedEffects, originalMaterialState = 16, {}, {}, {}, {}, {}, {}
+local promptConnection, renderConnection, noclipConnection, timeConnection, fruitConnection
 
 local startTime = os.time()
 
@@ -52,9 +53,26 @@ uiStroke.Color = Color3.fromRGB(255, 215, 0)
 uiStroke.Thickness = 2.5
 
 local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 280), UDim2.new(0, 85, 0, 20)
+mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 320), UDim2.new(0, 85, 0, 20)
 mainFrame.BackgroundColor3, mainFrame.Active, mainFrame.Draggable, mainFrame.ClipsDescendants = Color3.fromRGB(25, 25, 25), true, true, true
 createCorner(mainFrame, 8)
+
+local bloxFruitFrame = Instance.new("Frame", screenGui)
+bloxFruitFrame.Size, bloxFruitFrame.Position = UDim2.new(0, 200, 0, 150), UDim2.new(0, 410, 0, 20)
+bloxFruitFrame.BackgroundColor3, bloxFruitFrame.Active, bloxFruitFrame.Draggable, bloxFruitFrame.ClipsDescendants = Color3.fromRGB(25, 25, 25), true, true, true
+bloxFruitFrame.Visible = false
+createCorner(bloxFruitFrame, 8)
+
+local bfTitle = Instance.new("TextLabel", bloxFruitFrame)
+bfTitle.Size, bfTitle.Position, bfTitle.BackgroundTransparency = UDim2.new(1, -30, 0, 30), UDim2.new(0, 10, 0, 5), 1
+bfTitle.TextColor3, bfTitle.TextSize, bfTitle.Font, bfTitle.Text = Color3.fromRGB(255, 215, 0), 14, Enum.Font.SourceSansBold, "BLOX FRUIT MENU"
+
+local bfCloseButton = Instance.new("TextButton", bloxFruitFrame)
+bfCloseButton.Size, bfCloseButton.Position = UDim2.new(0, 20, 0, 20), UDim2.new(1, -25, 0, 5)
+bfCloseButton.BackgroundColor3, bfCloseButton.TextColor3, bfCloseButton.TextSize, bfCloseButton.Font, bfCloseButton.Text = Color3.fromRGB(200, 50, 50), TEXT_COLOR, 12, Enum.Font.SourceSansBold, "X"
+createCorner(bfCloseButton, 4)
+
+bfCloseButton.MouseButton1Click:Connect(function() bloxFruitFrame.Visible = false end)
 
 local closeButton = Instance.new("TextButton", mainFrame)
 closeButton.Size, closeButton.Position = UDim2.new(0, 20, 0, 20), UDim2.new(1, -25, 0, 5)
@@ -62,59 +80,67 @@ closeButton.BackgroundColor3, closeButton.TextColor3, closeButton.TextSize, clos
 createCorner(closeButton, 4)
 
 local separator = Instance.new("Frame", mainFrame)
-separator.Size, separator.Position, separator.BackgroundColor3, separator.BorderSizePixel = UDim2.new(0, 2, 0, 210), UDim2.new(0, 156, 0, 10), Color3.fromRGB(50, 50, 50), 0
+separator.Size, separator.Position, separator.BackgroundColor3, separator.BorderSizePixel = UDim2.new(0, 2, 0, 250), UDim2.new(0, 156, 0, 10), Color3.fromRGB(50, 50, 50), 0
 
-local function makeBtn(name, text, pos)
-	local btn = Instance.new("TextButton", mainFrame)
-	btn.Name, btn.Size, btn.Position = name, UDim2.new(0, 140, 0, 32), pos
+local function makeBtn(parent, name, text, pos, size)
+	local btn = Instance.new("TextButton", parent)
+	btn.Name, btn.Size, btn.Position = name, size or UDim2.new(0, 140, 0, 32), pos
 	btn.BackgroundColor3, btn.TextColor3, btn.TextSize, btn.Font, btn.Text = Color3.fromRGB(40, 40, 40), TEXT_COLOR, 14, Enum.Font.SourceSansBold, text
 	createCorner(btn, 6)
 	return btn
 end
 
 local function setBtnState(btn, state, label)
-	btn.Text = label .. ": " .. (state and "BẬT" or "TẮT")
+	btn.Text = label .. ": " .. (state and "ON" or "OFF")
 	btn.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
 end
 
-local espButton = makeBtn("ESPButton", "ESP: TẮT", UDim2.new(0, 10, 0, 30))
-local promptButton = makeBtn("PromptButton", "Mở Nhanh: TẮT", UDim2.new(0, 10, 0, 68))
-local lagButton = makeBtn("LagButton", "Giảm Lag: TẮT", UDim2.new(0, 10, 0, 106))
-local infJumpButton = makeBtn("InfJumpButton", "Nhảy Vô Hạn: TẮT", UDim2.new(0, 10, 0, 144))
-local noclipButton = makeBtn("NoclipButton", "Đi Xuyên Tường: TẮT", UDim2.new(0, 10, 0, 182))
+local espButton = makeBtn(mainFrame, "ESPButton", "ESP: OFF", UDim2.new(0, 10, 0, 30))
+local promptButton = makeBtn(mainFrame, "PromptButton", "Instant Prompt: OFF", UDim2.new(0, 10, 0, 68))
+local lagButton = makeBtn(mainFrame, "LagButton", "Fix Lag: OFF", UDim2.new(0, 10, 0, 106))
+local infJumpButton = makeBtn(mainFrame, "InfJumpButton", "Inf Jump: OFF", UDim2.new(0, 10, 0, 144))
+local noclipButton = makeBtn(mainFrame, "NoclipButton", "Noclip: OFF", UDim2.new(0, 10, 0, 182))
+
+local bloxFruitMenuBtn = makeBtn(mainFrame, "BloxFruitMenuBtn", "Blox Fruit Menu", UDim2.new(0, 10, 0, 220))
+bloxFruitMenuBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+
+bloxFruitMenuBtn.MouseButton1Click:Connect(function()
+	bloxFruitFrame.Visible = not bloxFruitFrame.Visible
+end)
+
+local fruitEspBtn = makeBtn(bloxFruitFrame, "FruitEspBtn", "Fruit ESP: OFF", UDim2.new(0, 15, 0, 50), UDim2.new(0, 170, 0, 35))
 
 local speedTitle = Instance.new("TextLabel", mainFrame)
 speedTitle.Size, speedTitle.Position, speedTitle.BackgroundTransparency = UDim2.new(0, 140, 0, 20), UDim2.new(0, 165, 0, 30), 1
-speedTitle.TextColor3, speedTitle.TextSize, speedTitle.Font, speedTitle.Text = Color3.fromRGB(200, 200, 200), 13, Enum.Font.SourceSansBold, "ĐIỀU CHỈNH TỐC ĐỘ"
+speedTitle.TextColor3, speedTitle.TextSize, speedTitle.Font, speedTitle.Text = Color3.fromRGB(200, 200, 200), 13, Enum.Font.SourceSansBold, "SPEED CONTROL"
 
-local speedButton = makeBtn("SpeedButton", "Tốc Độ: TẮT", UDim2.new(0, 165, 0, 55))
+local speedButton = makeBtn(mainFrame, "SpeedButton", "Speed: OFF", UDim2.new(0, 165, 0, 55))
 local speedInput = Instance.new("TextBox", mainFrame)
 speedInput.Size, speedInput.Position = UDim2.new(0, 140, 0, 32), UDim2.new(0, 165, 0, 93)
 speedInput.BackgroundColor3, speedInput.TextColor3, speedInput.TextSize, speedInput.Font = Color3.fromRGB(35, 35, 35), TEXT_COLOR, 14, Enum.Font.SourceSansBold
-speedInput.PlaceholderText, speedInput.Text = "Nhập tốc độ (VD: 50)", ""
+speedInput.PlaceholderText, speedInput.Text = "Set Speed (e.g. 50)", ""
 createCorner(speedInput, 6)
 
 local timeFrame = Instance.new("Frame", mainFrame)
-timeFrame.Size, timeFrame.Position = UDim2.new(1, -20, 0, 42), UDim2.new(0, 10, 0, 225)
+timeFrame.Size, timeFrame.Position = UDim2.new(1, -20, 0, 42), UDim2.new(0, 10, 0, 265)
 timeFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
 createCorner(timeFrame, 6)
 
 local timeHeader = Instance.new("TextLabel", timeFrame)
 timeHeader.Size, timeHeader.Position, timeHeader.BackgroundTransparency = UDim2.new(1, 0, 0, 16), UDim2.new(0, 0, 0, 2), 1
-timeHeader.TextColor3, timeHeader.TextSize, timeHeader.Font, timeHeader.Text = Color3.fromRGB(255, 215, 0), 12, Enum.Font.SourceSansBold, "THỜI GIAN SERVER"
+timeHeader.TextColor3, timeHeader.TextSize, timeHeader.Font, timeHeader.Text = Color3.fromRGB(255, 215, 0), 12, Enum.Font.SourceSansBold, "SERVER TIME"
 
 local userTimeLabel = Instance.new("TextLabel", timeFrame)
 userTimeLabel.Size, userTimeLabel.Position, userTimeLabel.BackgroundTransparency = UDim2.new(1, -10, 0, 18), UDim2.new(0, 10, 0, 20), 1
 userTimeLabel.TextColor3, userTimeLabel.TextSize, userTimeLabel.Font, userTimeLabel.TextXAlignment = Color3.fromRGB(0, 230, 255), 11, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
-userTimeLabel.Text = "Đã Tham Gia: 00:00:00"
+userTimeLabel.Text = "You Joined: 00:00:00"
 
 local lastTimeCheck = 0
 timeConnection = RunService.Heartbeat:Connect(function()
 	if os.clock() - lastTimeCheck >= 1 then
 		lastTimeCheck = os.clock()
-		
 		local userSeconds = os.time() - startTime
-		userTimeLabel.Text = "Đã Tham Gia: " .. formatTime(userSeconds)
+		userTimeLabel.Text = "You Joined: " .. formatTime(userSeconds)
 	end
 end)
 
@@ -159,9 +185,65 @@ espButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+local function removeFruitESP(obj)
+	if trackedFruits[obj] then
+		if trackedFruits[obj].Highlight then trackedFruits[obj].Highlight:Destroy() end
+		if trackedFruits[obj].Billboard then trackedFruits[obj].Billboard:Destroy() end
+		trackedFruits[obj] = nil
+	end
+end
+
+local function createFruitESP(obj)
+	if not fruitEspEnabled then return end
+	if obj:IsA("Tool") or obj:IsA("Model") then
+		if string.find(string.lower(obj.Name), "fruit") then
+			local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+			if handle then
+				removeFruitESP(obj)
+
+				local hl = Instance.new("Highlight", obj)
+				hl.FillColor, hl.OutlineColor, hl.FillTransparency, hl.DepthMode = FRUIT_COLOR, TEXT_COLOR, 0.4, Enum.HighlightDepthMode.AlwaysOnTop
+
+				local gui = Instance.new("BillboardGui", obj)
+				gui.Adornee, gui.Size, gui.StudsOffset, gui.AlwaysOnTop = handle, UDim2.new(0, 150, 0, 40), Vector3.new(0, 2, 0), true
+
+				local lbl = Instance.new("TextLabel", gui)
+				lbl.Size, lbl.BackgroundTransparency, lbl.TextColor3, lbl.TextStrokeTransparency, lbl.TextSize, lbl.Font = UDim2.new(1, 0, 1, 0), 1, FRUIT_COLOR, 0, 14, Enum.Font.SourceSansBold
+				lbl.Text = obj.Name
+
+				trackedFruits[obj] = {Highlight = hl, Billboard = gui, TextLabel = lbl, Handle = handle}
+			end
+		end
+	end
+end
+
+local function updateFruitESP()
+	if fruitEspEnabled then
+		for _, v in ipairs(workspace:GetDescendants()) do
+			createFruitESP(v)
+		end
+		fruitConnection = workspace.DescendantAdded:Connect(function(v)
+			task.wait(0.1)
+			createFruitESP(v)
+		end)
+	else
+		if fruitConnection then fruitConnection:Disconnect() fruitConnection = nil end
+		for obj, _ in pairs(trackedFruits) do
+			removeFruitESP(obj)
+		end
+		table.clear(trackedFruits)
+	end
+end
+
+fruitEspBtn.MouseButton1Click:Connect(function()
+	fruitEspEnabled = not fruitEspEnabled
+	setBtnState(fruitEspBtn, fruitEspEnabled, "Fruit ESP")
+	updateFruitESP()
+end)
+
 promptButton.MouseButton1Click:Connect(function()
 	instantPromptEnabled = not instantPromptEnabled
-	setBtnState(promptButton, instantPromptEnabled, "Mở Nhanh")
+	setBtnState(promptButton, instantPromptEnabled, "Instant Prompt")
 	if instantPromptEnabled then
 		promptConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
 			if not originalHoldDurations[prompt] then originalHoldDurations[prompt] = prompt.HoldDuration end
@@ -184,7 +266,7 @@ end)
 
 lagButton.MouseButton1Click:Connect(function()
 	fixLagEnabled = not fixLagEnabled
-	setBtnState(lagButton, fixLagEnabled, "Giảm Lag")
+	setBtnState(lagButton, fixLagEnabled, "Fix Lag")
 	if fixLagEnabled then
 		originalLightingSettings = {GlobalShadows = Lighting.GlobalShadows, FogEnd = Lighting.FogEnd}
 		Lighting.GlobalShadows, Lighting.FogEnd = false, 9e9
@@ -230,17 +312,17 @@ end)
 
 infJumpButton.MouseButton1Click:Connect(function()
 	infiniteJumpEnabled = not infiniteJumpEnabled
-	setBtnState(infJumpButton, infiniteJumpEnabled, "Nhảy Vô Hạn")
+	setBtnState(infJumpButton, infiniteJumpEnabled, "Inf Jump")
 end)
 
 noclipButton.MouseButton1Click:Connect(function()
 	noclipEnabled = not noclipEnabled
-	setBtnState(noclipButton, noclipEnabled, "Đi Xuyên Tường")
+	setBtnState(noclipButton, noclipEnabled, "Noclip")
 end)
 
 speedButton.MouseButton1Click:Connect(function()
 	speedEnabled = not speedEnabled
-	setBtnState(speedButton, speedEnabled, "Tốc Độ")
+	setBtnState(speedButton, speedEnabled, "Speed")
 	if not speedEnabled and LocalPlayer.Character then
 		local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 		if hum then hum.WalkSpeed = 16 end
@@ -273,19 +355,32 @@ end)
 
 local lastUpdate = 0
 renderConnection = RunService.RenderStepped:Connect(function()
-	if not espEnabled or os.clock() - lastUpdate < 0.05 then return end
+	if os.clock() - lastUpdate < 0.05 then return end
 	lastUpdate = os.clock()
 
 	local myChar = LocalPlayer.Character
 	if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
 	local myPos = myChar.HumanoidRootPart.Position
 
-	for player, data in pairs(trackedPlayers) do
-		if data.Character and data.Character:IsDescendantOf(workspace) and data.HRP then
-			local dist = math.floor((data.HRP.Position - myPos).Magnitude)
-			data.TextLabel.Text = string.format("%s\n[%d mét]", player.DisplayName, dist)
-		else
-			removeESP(player)
+	if espEnabled then
+		for player, data in pairs(trackedPlayers) do
+			if data.Character and data.Character:IsDescendantOf(workspace) and data.HRP then
+				local dist = math.floor((data.HRP.Position - myPos).Magnitude)
+				data.TextLabel.Text = string.format("%s\n[%d studs]", player.DisplayName, dist)
+			else
+				removeESP(player)
+			end
+		end
+	end
+
+	if fruitEspEnabled then
+		for obj, data in pairs(trackedFruits) do
+			if obj and obj:IsDescendantOf(workspace) and data.Handle then
+				local dist = math.floor((data.Handle.Position - myPos).Magnitude)
+				data.TextLabel.Text = string.format("%s\n[%d studs]", obj.Name, dist)
+			else
+				removeFruitESP(obj)
+			end
 		end
 	end
 end)
@@ -295,10 +390,12 @@ local function cleanupAll()
 	if renderConnection then renderConnection:Disconnect() renderConnection = nil end
 	if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
 	if promptConnection then promptConnection:Disconnect() promptConnection = nil end
+	if fruitConnection then fruitConnection:Disconnect() fruitConnection = nil end
 end
 
 closeButton.MouseButton1Click:Connect(function()
 	if espEnabled then espButton.MouseButton1Click:Fire() end
+	if fruitEspEnabled then fruitEspBtn.MouseButton1Click:Fire() end
 	if instantPromptEnabled then promptButton.MouseButton1Click:Fire() end
 	if fixLagEnabled then lagButton.MouseButton1Click:Fire() end
 	if speedEnabled then speedButton.MouseButton1Click:Fire() end
