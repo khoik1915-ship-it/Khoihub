@@ -196,7 +196,8 @@ end
 local function createFruitESP(obj)
 	if not fruitEspEnabled then return end
 	if obj:IsA("Tool") or obj:IsA("Model") then
-		if string.find(string.lower(obj.Name), "fruit") then
+		local name = string.lower(obj.Name)
+		if string.find(name, "fruit") or string.find(name, "blox fruit") then
 			local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
 			if handle then
 				removeFruitESP(obj)
