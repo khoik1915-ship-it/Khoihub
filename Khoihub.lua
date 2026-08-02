@@ -19,13 +19,21 @@ local function createCorner(parent, radius)
 end
 
 local toggleIconButton = Instance.new("ImageButton", screenGui)
-toggleIconButton.Size, toggleIconButton.Position = UDim2.new(0, 50, 0, 50), UDim2.new(0, 20, 0, 20)
-toggleIconButton.BackgroundColor3, toggleIconButton.Active, toggleIconButton.Draggable = Color3.fromRGB(25, 25, 25), true, true
-toggleIconButton.Image, toggleIconButton.ScaleType = "rbxassetid://0", Enum.ScaleType.Fit
-createCorner(toggleIconButton, 25)
+toggleIconButton.Name = "ToggleIconButton"
+toggleIconButton.Size = UDim2.new(0, 55, 0, 55)
+toggleIconButton.Position = UDim2.new(0, 20, 0, 20)
+toggleIconButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+toggleIconButton.Active, toggleIconButton.Draggable = true, true
+toggleIconButton.Image = "rbxassetid://6835268482"
+toggleIconButton.ScaleType = Enum.ScaleType.Crop
+createCorner(toggleIconButton, 28)
+
+local uiStroke = Instance.new("UIStroke", toggleIconButton)
+uiStroke.Color = Color3.fromRGB(255, 215, 0)
+uiStroke.Thickness = 2.5
 
 local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 225), UDim2.new(0, 80, 0, 20)
+mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 225), UDim2.new(0, 85, 0, 20)
 mainFrame.BackgroundColor3, mainFrame.Active, mainFrame.Draggable, mainFrame.ClipsDescendants = Color3.fromRGB(25, 25, 25), true, true, true
 createCorner(mainFrame, 8)
 
