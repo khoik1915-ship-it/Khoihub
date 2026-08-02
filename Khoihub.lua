@@ -2,17 +2,23 @@ local Players, RunService, CoreGui = game:GetService("Players"), game:GetService
 local ProximityPromptService, Lighting, UserInputService = game:GetService("ProximityPromptService"), game:GetService("Lighting"), game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
-if CoreGui:FindFirstChild("ESPMenuGui") then CoreGui.ESPMenuGui:Destroy() end
+local parentGui
+local success, _ = pcall(function() return CoreGui.Name end)
+if success then
+	parentGui = (gethui and gethui()) or CoreGui
+else
+	parentGui = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+if parentGui:FindFirstChild("ESPMenuGui") then parentGui.ESPMenuGui:Destroy() end
 
 local HIGHLIGHT_COLOR, TEXT_COLOR = Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 255, 255)
 local espEnabled, instantPromptEnabled, fixLagEnabled, infiniteJumpEnabled, noclipEnabled, speedEnabled = false, false, false, false, false, false
 local customSpeed, trackedPlayers, originalHoldDurations, originalLightingSettings, removedEffects, originalMaterialState = 16, {}, {}, {}, {}, {}
 local promptConnection, renderConnection, noclipConnection, timeConnection
 
--- Thời điểm bắt đầu chạy script
 local startTime = os.time()
 
--- Hàm hỗ trợ định dạng giây thành hh:mm:ss
 local function formatTime(seconds)
 	local hrs = math.floor(seconds / 3600)
 	local mins = math.floor((seconds % 3600) / 60)
@@ -20,9 +26,10 @@ local function formatTime(seconds)
 	return string.format("%02d:%02d:%02d", hrs, mins, secs)
 end
 
--- UI Setup
-local screenGui = Instance.new("ScreenGui", CoreGui)
-screenGui.Name, screenGui.ResetOnSpawn = "ESPMenuGui", false
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ESPMenuGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = parentGui
 
 local function createCorner(parent, radius)
 	local corner = Instance.new("UICorner", parent)
@@ -30,7 +37,6 @@ local function createCorner(parent, radius)
 	return corner
 end
 
--- Nút Icon Cờ Việt Nam (Hình tròn)
 local toggleIconButton = Instance.new("ImageButton", screenGui)
 toggleIconButton.Name = "ToggleIconButton"
 toggleIconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -45,9 +51,8 @@ local uiStroke = Instance.new("UIStroke", toggleIconButton)
 uiStroke.Color = Color3.fromRGB(255, 215, 0)
 uiStroke.Thickness = 2.5
 
--- Main Frame (Chiều cao 285px để chứa thêm khung thời gian)
 local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 285), UDim2.new(0, 85, 0, 20)
+mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 295), UDim2.new(0, 85, 0, 20)
 mainFrame.BackgroundColor3, mainFrame.Active, mainFrame.Draggable, mainFrame.ClipsDescendants = Color3.fromRGB(25, 25, 25), true, true, true
 createCorner(mainFrame, 8)
 
@@ -68,54 +73,56 @@ local function makeBtn(name, text, pos)
 end
 
 local function setBtnState(btn, state, label)
-	btn.Text = label .. ": " .. (state and "ON" or "OFF")
+	btn.Text = label .. ": " .. (state and "BẬT" or "TẮT")
 	btn.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
 end
 
-local espButton = makeBtn("ESPButton", "ESP: OFF", UDim2.new(0, 10, 0, 30))
-local promptButton = makeBtn("PromptButton", "Instant Prompt: OFF", UDim2.new(0, 10, 0, 68))
-local lagButton = makeBtn("LagButton", "Fix Lag: OFF", UDim2.new(0, 10, 0, 106))
-local infJumpButton = makeBtn("InfJumpButton", "Inf Jump: OFF", UDim2.new(0, 10, 0, 144))
-local noclipButton = makeBtn("NoclipButton", "Noclip: OFF", UDim2.new(0, 10, 0, 182))
+local espButton = makeBtn("ESPButton", "ESP: TẮT", UDim2.new(0, 10, 0, 30))
+local promptButton = makeBtn("PromptButton", "Mở Nhanh: TẮT", UDim2.new(0, 10, 0, 68))
+local lagButton = makeBtn("LagButton", "Giảm Lag: TẮT", UDim2.new(0, 10, 0, 106))
+local infJumpButton = makeBtn("InfJumpButton", "Nhảy Vô Hạn: TẮT", UDim2.new(0, 10, 0, 144))
+local noclipButton = makeBtn("NoclipButton", "Đi Xuyên Tường: TẮT", UDim2.new(0, 10, 0, 182))
 
 local speedTitle = Instance.new("TextLabel", mainFrame)
 speedTitle.Size, speedTitle.Position, speedTitle.BackgroundTransparency = UDim2.new(0, 140, 0, 20), UDim2.new(0, 165, 0, 30), 1
-speedTitle.TextColor3, speedTitle.TextSize, speedTitle.Font, speedTitle.Text = Color3.fromRGB(200, 200, 200), 13, Enum.Font.SourceSansBold, "SPEED CONTROL"
+speedTitle.TextColor3, speedTitle.TextSize, speedTitle.Font, speedTitle.Text = Color3.fromRGB(200, 200, 200), 13, Enum.Font.SourceSansBold, "ĐIỀU CHỈNH TỐC ĐỘ"
 
-local speedButton = makeBtn("SpeedButton", "Speed: OFF", UDim2.new(0, 165, 0, 55))
+local speedButton = makeBtn("SpeedButton", "Tốc Độ: TẮT", UDim2.new(0, 165, 0, 55))
 local speedInput = Instance.new("TextBox", mainFrame)
 speedInput.Size, speedInput.Position = UDim2.new(0, 140, 0, 32), UDim2.new(0, 165, 0, 93)
 speedInput.BackgroundColor3, speedInput.TextColor3, speedInput.TextSize, speedInput.Font = Color3.fromRGB(35, 35, 35), TEXT_COLOR, 14, Enum.Font.SourceSansBold
-speedInput.PlaceholderText, speedInput.Text = "Set Speed (e.g. 50)", ""
+speedInput.PlaceholderText, speedInput.Text = "Nhập tốc độ (VD: 50)", ""
 createCorner(speedInput, 6)
 
--- --- BỘ ĐẾM THỜI GIAN ---
 local timeFrame = Instance.new("Frame", mainFrame)
-timeFrame.Size, timeFrame.Position = UDim2.new(1, -20, 0, 50), UDim2.new(0, 10, 0, 225)
+timeFrame.Size, timeFrame.Position = UDim2.new(1, -20, 0, 60), UDim2.new(0, 10, 0, 225)
 timeFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
 createCorner(timeFrame, 6)
 
+local timeHeader = Instance.new("TextLabel", timeFrame)
+timeHeader.Size, timeHeader.Position, timeHeader.BackgroundTransparency = UDim2.new(1, 0, 0, 16), UDim2.new(0, 0, 0, 2), 1
+timeHeader.TextColor3, timeHeader.TextSize, timeHeader.Font, timeHeader.Text = Color3.fromRGB(255, 215, 0), 12, Enum.Font.SourceSansBold, "THỜI GIAN SERVER"
+
 local userTimeLabel = Instance.new("TextLabel", timeFrame)
-userTimeLabel.Size, userTimeLabel.Position, userTimeLabel.BackgroundTransparency = UDim2.new(1, -10, 0, 22), UDim2.new(0, 10, 0, 3), 1
-userTimeLabel.TextColor3, userTimeLabel.TextSize, userTimeLabel.Font, userTimeLabel.TextXAlignment = Color3.fromRGB(0, 230, 255), 12, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
-userTimeLabel.Text = "You Joined: 00:00:00"
+userTimeLabel.Size, userTimeLabel.Position, userTimeLabel.BackgroundTransparency = UDim2.new(1, -10, 0, 18), UDim2.new(0, 10, 0, 20), 1
+userTimeLabel.TextColor3, userTimeLabel.TextSize, userTimeLabel.Font, userTimeLabel.TextXAlignment = Color3.fromRGB(0, 230, 255), 11, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
+userTimeLabel.Text = "Đã Tham Gia: 00:00:00"
 
 local serverTimeLabel = Instance.new("TextLabel", timeFrame)
-serverTimeLabel.Size, serverTimeLabel.Position, serverTimeLabel.BackgroundTransparency = UDim2.new(1, -10, 0, 22), UDim2.new(0, 10, 0, 25), 1
-serverTimeLabel.TextColor3, serverTimeLabel.TextSize, serverTimeLabel.Font, serverTimeLabel.TextXAlignment = Color3.fromRGB(255, 200, 50), 12, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
-serverTimeLabel.Text = "Server Age: 00:00:00"
+serverTimeLabel.Size, serverTimeLabel.Position, serverTimeLabel.BackgroundTransparency = UDim2.new(1, -10, 0, 18), UDim2.new(0, 10, 0, 38), 1
+serverTimeLabel.TextColor3, serverTimeLabel.TextSize, serverTimeLabel.Font, serverTimeLabel.TextXAlignment = Color3.fromRGB(255, 170, 0), 11, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
+serverTimeLabel.Text = "Tuổi Thọ Server: 00:00:00"
 
--- Cập nhật đồng hồ
 local lastTimeCheck = 0
 timeConnection = RunService.Heartbeat:Connect(function()
 	if os.clock() - lastTimeCheck >= 1 then
 		lastTimeCheck = os.clock()
 		
 		local userSeconds = os.time() - startTime
-		userTimeLabel.Text = "You Joined: " .. formatTime(userSeconds)
+		userTimeLabel.Text = "Đã Tham Gia: " .. formatTime(userSeconds)
 		
 		local serverSeconds = workspace.DistributedGameTime
-		serverTimeLabel.Text = "Server Age: " .. formatTime(serverSeconds)
+		serverTimeLabel.Text = "Tuổi Thọ Server: " .. formatTime(serverSeconds)
 	end
 end)
 
@@ -162,7 +169,7 @@ end)
 
 promptButton.MouseButton1Click:Connect(function()
 	instantPromptEnabled = not instantPromptEnabled
-	setBtnState(promptButton, instantPromptEnabled, "Instant Prompt")
+	setBtnState(promptButton, instantPromptEnabled, "Mở Nhanh")
 	if instantPromptEnabled then
 		promptConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
 			if not originalHoldDurations[prompt] then originalHoldDurations[prompt] = prompt.HoldDuration end
@@ -185,7 +192,7 @@ end)
 
 lagButton.MouseButton1Click:Connect(function()
 	fixLagEnabled = not fixLagEnabled
-	setBtnState(lagButton, fixLagEnabled, "Fix Lag")
+	setBtnState(lagButton, fixLagEnabled, "Giảm Lag")
 	if fixLagEnabled then
 		originalLightingSettings = {GlobalShadows = Lighting.GlobalShadows, FogEnd = Lighting.FogEnd}
 		Lighting.GlobalShadows, Lighting.FogEnd = false, 9e9
@@ -231,17 +238,17 @@ end)
 
 infJumpButton.MouseButton1Click:Connect(function()
 	infiniteJumpEnabled = not infiniteJumpEnabled
-	setBtnState(infJumpButton, infiniteJumpEnabled, "Inf Jump")
+	setBtnState(infJumpButton, infiniteJumpEnabled, "Nhảy Vô Hạn")
 end)
 
 noclipButton.MouseButton1Click:Connect(function()
 	noclipEnabled = not noclipEnabled
-	setBtnState(noclipButton, noclipEnabled, "Noclip")
+	setBtnState(noclipButton, noclipEnabled, "Đi Xuyên Tường")
 end)
 
 speedButton.MouseButton1Click:Connect(function()
 	speedEnabled = not speedEnabled
-	setBtnState(speedButton, speedEnabled, "Speed")
+	setBtnState(speedButton, speedEnabled, "Tốc Độ")
 	if not speedEnabled and LocalPlayer.Character then
 		local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 		if hum then hum.WalkSpeed = 16 end
@@ -284,14 +291,13 @@ renderConnection = RunService.RenderStepped:Connect(function()
 	for player, data in pairs(trackedPlayers) do
 		if data.Character and data.Character:IsDescendantOf(workspace) and data.HRP then
 			local dist = math.floor((data.HRP.Position - myPos).Magnitude)
-			data.TextLabel.Text = string.format("%s\n[%d studs]", player.DisplayName, dist)
+			data.TextLabel.Text = string.format("%s\n[%d mét]", player.DisplayName, dist)
 		else
 			removeESP(player)
 		end
 	end
 end)
 
--- Hàm dọn dẹp chung
 local function cleanupAll()
 	if timeConnection then timeConnection:Disconnect() timeConnection = nil end
 	if renderConnection then renderConnection:Disconnect() renderConnection = nil end
@@ -312,7 +318,6 @@ Players.PlayerAdded:Connect(function(p)
 	p.CharacterAdded:Connect(function() if espEnabled then task.wait(0.5) createESP(p) end end)
 end)
 
--- TỰ ĐỘNG XÓA KẾT NỐI KHỎI BỘ NHỚ KHI RỜI SERVER HOẶC CHUYỂN MAP
 Players.PlayerRemoving:Connect(function(p)
 	if p == LocalPlayer then
 		cleanupAll()
@@ -326,3 +331,4 @@ if LocalPlayer.OnTeleport then
 		cleanupAll()
 	end)
 end
+i
