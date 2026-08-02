@@ -52,7 +52,7 @@ uiStroke.Color = Color3.fromRGB(255, 215, 0)
 uiStroke.Thickness = 2.5
 
 local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 295), UDim2.new(0, 85, 0, 20)
+mainFrame.Size, mainFrame.Position = UDim2.new(0, 315, 0, 280), UDim2.new(0, 85, 0, 20)
 mainFrame.BackgroundColor3, mainFrame.Active, mainFrame.Draggable, mainFrame.ClipsDescendants = Color3.fromRGB(25, 25, 25), true, true, true
 createCorner(mainFrame, 8)
 
@@ -95,7 +95,7 @@ speedInput.PlaceholderText, speedInput.Text = "Nhập tốc độ (VD: 50)", ""
 createCorner(speedInput, 6)
 
 local timeFrame = Instance.new("Frame", mainFrame)
-timeFrame.Size, timeFrame.Position = UDim2.new(1, -20, 0, 60), UDim2.new(0, 10, 0, 225)
+timeFrame.Size, timeFrame.Position = UDim2.new(1, -20, 0, 42), UDim2.new(0, 10, 0, 225)
 timeFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
 createCorner(timeFrame, 6)
 
@@ -108,11 +108,6 @@ userTimeLabel.Size, userTimeLabel.Position, userTimeLabel.BackgroundTransparency
 userTimeLabel.TextColor3, userTimeLabel.TextSize, userTimeLabel.Font, userTimeLabel.TextXAlignment = Color3.fromRGB(0, 230, 255), 11, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
 userTimeLabel.Text = "Đã Tham Gia: 00:00:00"
 
-local serverTimeLabel = Instance.new("TextLabel", timeFrame)
-serverTimeLabel.Size, serverTimeLabel.Position, serverTimeLabel.BackgroundTransparency = UDim2.new(1, -10, 0, 18), UDim2.new(0, 10, 0, 38), 1
-serverTimeLabel.TextColor3, serverTimeLabel.TextSize, serverTimeLabel.Font, serverTimeLabel.TextXAlignment = Color3.fromRGB(255, 170, 0), 11, Enum.Font.SourceSansBold, Enum.TextXAlignment.Left
-serverTimeLabel.Text = "Tuổi Thọ Server: 00:00:00"
-
 local lastTimeCheck = 0
 timeConnection = RunService.Heartbeat:Connect(function()
 	if os.clock() - lastTimeCheck >= 1 then
@@ -120,9 +115,6 @@ timeConnection = RunService.Heartbeat:Connect(function()
 		
 		local userSeconds = os.time() - startTime
 		userTimeLabel.Text = "Đã Tham Gia: " .. formatTime(userSeconds)
-		
-		local serverSeconds = workspace.DistributedGameTime
-		serverTimeLabel.Text = "Tuổi Thọ Server: " .. formatTime(serverSeconds)
 	end
 end)
 
@@ -331,4 +323,3 @@ if LocalPlayer.OnTeleport then
 		cleanupAll()
 	end)
 end
-i
